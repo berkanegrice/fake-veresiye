@@ -1,4 +1,3 @@
-using System.Text;
 using FakeVeresiye.Api.Dtos;
 using FakeVeresiye.Api.Services.Statements;
 using Microsoft.AspNetCore.Mvc;
