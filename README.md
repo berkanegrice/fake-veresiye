@@ -14,7 +14,7 @@ page 1254, so characters like **Ç Ğ İ Ö Ş Ü** survive intact.
 ```
 FakeVeresiye.slnx
 Dockerfile  compose.yaml    single-container deployment (API + SPA)
-deploy/                     host backup job: backup.sh + systemd service/timer + msmtprc example
+deploy/                     host backup job: backup.sh + systemd service/timer
 src/
   FakeVeresiye.Api/      ASP.NET Core API + host for the built SPA
     Controllers/         Customers, Transactions, Import, Reports
@@ -104,21 +104,23 @@ For LAN HTTPS put Caddy in front; for remote access use Tailscale or a Cloudflar
 
 `deploy/` has a host backup job (independent of the container, so it keeps running when the
 app doesn't). Each run takes a consistent snapshot with SQLite's backup API, checks its
-integrity, compresses and **`age`-encrypts** it (the data is PII), emails it as an attachment
-(offsite copy) and keeps the last 14 locally, then pings a dead-man's-switch URL.
+integrity, compresses and **`age`-encrypts** it (the data is PII), and writes it to a backup
+drive, keeping the last 30. No network involved. Point `FV_BACKUP_DIR` at an external / second
+drive and set `FV_REQUIRE_MOUNT` so a run aborts loudly if that drive isn't plugged in.
 
 ```bash
-sudo apt install sqlite3 age msmtp curl
+sudo apt install sqlite3 age            # + curl only if you use FV_HEALTHCHECK_URL
 
 sudo install -D deploy/backup.sh /opt/fakeveresiye/deploy/backup.sh
 sudo cp deploy/fakeveresiye-backup.{service,timer} /etc/systemd/system/
-sudo cp deploy/msmtprc.example /root/.msmtprc && sudo chmod 600 /root/.msmtprc  # add your Gmail App password
 
-# generate the encryption key — keep the PRIVATE key OFF this machine
-age-keygen -o backup-key.txt          # prints the age1... public key
+# generate the encryption key — keep the PRIVATE key OFF this machine (USB, password manager)
+age-keygen -o backup-key.txt           # prints the age1... public key
 
 # edit /etc/systemd/system/fakeveresiye-backup.service:
-#   FV_DB=/opt/fakeveresiye/data/fakeveresiye.db, FV_AGE_RECIPIENT=age1..., FV_MAIL_TO=...
+#   FV_DB=/opt/fakeveresiye/data/fakeveresiye.db
+#   FV_BACKUP_DIR=/mnt/backup/fakeveresiye     FV_REQUIRE_MOUNT=/mnt/backup
+#   FV_AGE_RECIPIENT=age1...
 
 sudo systemctl daemon-reload
 sudo systemctl start fakeveresiye-backup.service     # test one run now
@@ -132,6 +134,9 @@ docker compose down
 age -d -i backup-key.txt fakeveresiye-YYYYMMDD-HHMMSS.db.gz.age | gunzip > data/fakeveresiye.db
 docker compose up -d
 ```
+
+The backup drive covers disk failure; for fire/theft, carry a copy off-site periodically or
+add a cloud sync of `FV_BACKUP_DIR` later.
 
 Keep a third copy on media you control (a USB the owner swaps) for a full 3-2-1 with no cloud.
 

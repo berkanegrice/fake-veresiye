@@ -3,8 +3,6 @@
 
 [Unit]
 Description=FakeVeresiye database backup
-After=network-online.target
-Wants=network-online.target
 
 [Service]
 Type=oneshot
@@ -12,21 +10,22 @@ Type=oneshot
 # --- edit these ---------------------------------------------------------------
 # Absolute path to the bind-mounted database (compose.yaml maps ./data -> /data).
 Environment=FV_DB=/opt/fakeveresiye/data/fakeveresiye.db
-Environment=FV_BACKUP_DIR=/var/backups/fakeveresiye
-Environment=FV_KEEP=14
+# Where backups are written -- point this at your backup drive.
+Environment=FV_BACKUP_DIR=/mnt/backup/fakeveresiye
+Environment=FV_KEEP=30
 # age public key that backups are encrypted to (keep the PRIVATE key off this box).
 Environment=FV_AGE_RECIPIENT=age1REPLACE_WITH_YOUR_PUBLIC_KEY
-# Email address for the offsite copy (needs msmtp configured for the User below).
-Environment=FV_MAIL_TO=owner@example.com
+# Abort if the backup drive is not mounted (set to its mountpoint, e.g. /mnt/backup).
+Environment=FV_REQUIRE_MOUNT=/mnt/backup
 # Optional healthchecks.io (or similar) URL, pinged on success.
 Environment=FV_HEALTHCHECK_URL=
 # ---------------------------------------------------------------------------
 
 ExecStart=/opt/fakeveresiye/deploy/backup.sh
 
-# root can read the container-owned DB file (uid 1654) and write /var/backups.
+# root can read the container-owned DB file (uid 1654) and write the backup drive.
 User=root
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/var/backups/fakeveresiye
+ReadWritePaths=/mnt/backup
 NoNewPrivileges=true
