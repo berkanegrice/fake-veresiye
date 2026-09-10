@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    image: fakeveresiye
+    container_name: fakeveresiye
+    restart: unless-stopped
+    ports:
+      # localhost only. Change to "8080:8080" to reach it from other devices on your LAN.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      # SQLite database lives here, on the host, so the backup job can read it directly.
+      - ./data:/data
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      # The image already sets ConnectionStrings__Default=Data Source=/data/fakeveresiye.db

@@ -1,0 +1,14 @@
+# /etc/systemd/system/fakeveresiye-backup.timer
+# Enable with:  sudo systemctl enable --now fakeveresiye-backup.timer
+
+[Unit]
+Description=Daily FakeVeresiye backup
+
+[Timer]
+OnCalendar=*-*-* 02:00
+RandomizedDelaySec=300
+# If the machine was off at 02:00, run the missed backup at next boot.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

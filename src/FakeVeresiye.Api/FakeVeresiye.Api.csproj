@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>FakeVeresiye.Api</RootNamespace>
+    <AssemblyName>FakeVeresiye.Api</AssemblyName>
+    <InvariantGlobalization>false</InvariantGlobalization>
+
+    <!-- The built React app in ../FakeVeresiye.Web is copied into wwwroot on publish so a
+         single published artifact serves both the API and the SPA. In development the two
+         run separately (dotnet run + npm run dev); the Vite dev server proxies /api here. -->
+    <SpaRoot>..\FakeVeresiye.Web\</SpaRoot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="QuestPDF" Version="2024.12.3" />
+  </ItemGroup>
+
+  <!-- On publish, build the SPA and drop it into wwwroot so one artifact serves everything.
+       Set -p:SkipSpaBuild=true when the SPA was already built and copied in (e.g. in Docker). -->
+  <Target Name="PublishSpa" BeforeTargets="ComputeFilesToPublish" Condition="'$(SkipSpaBuild)' != 'true'">
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+    <ItemGroup>
+      <SpaDist Include="$(SpaRoot)dist\**" />
+      <ResolvedFileToPublish Include="@(SpaDist->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+</Project>
