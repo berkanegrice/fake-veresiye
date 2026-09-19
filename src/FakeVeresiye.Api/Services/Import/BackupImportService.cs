@@ -19,15 +19,16 @@ public record ImportOutcome(bool Found, ValidationResultDto? Validation, ImportR
 public class BackupImportService(
     AppDbContext db,
     Veresiye5BackupReader reader,
-    IPreviewStore previews)
+    IPreviewStore previews,
+    ILogger<BackupImportService> logger)
 {
     private const string Source = "veresiye5";
 
-    public async Task<ImportPreviewResponse> PreviewAsync(Stream file, string fileName)
+    public async Task<ImportPreviewResponse> Preview(Stream file, string fileName)
     {
         var backup = reader.Read(file);
         var token = previews.Add(backup);
-        var validation = await ValidateAsync(backup, db: null);
+        var validation = await Validate(backup, db: null);
 
         return new ImportPreviewResponse(
             Token: token,
@@ -49,22 +50,26 @@ public class BackupImportService(
                 .ToList());
     }
 
-    public async Task<ValidationResultDto?> ValidateAsync(Guid token)
+    public async Task<ValidationResultDto?> Validate(Guid token)
     {
         if (!previews.TryGet(token, out var backup))
             return null;
 
-        return await ValidateAsync(backup, db);
+        return await Validate(backup, db);
     }
 
-    public async Task<ImportOutcome> ImportAsync(Guid token)
+    public async Task<ImportOutcome> Import(Guid token)
     {
         if (!previews.TryGet(token, out var backup))
             return new ImportOutcome(Found: false, Validation: null, Result: null);
 
-        var validation = await ValidateAsync(backup, db);
+        var validation = await Validate(backup, db);
         if (!validation.IsValid)
+        {
+            logger.LogWarning(
+                "Veresiye 5 import blocked by validation: {Errors}", string.Join(" | ", validation.Errors));
             return new ImportOutcome(Found: true, Validation: validation, Result: null);
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync();
 
@@ -122,6 +127,10 @@ public class BackupImportService(
         await tx.CommitAsync();
         previews.Remove(token);
 
+        logger.LogInformation(
+            "Veresiye 5 import committed: {Customers} customers, {Imported}/{Source} transactions imported",
+            backup.Customers.Count, imported, backup.Transactions.Count);
+
         return new ImportOutcome(
             Found: true,
             Validation: validation,
@@ -153,7 +162,7 @@ public class BackupImportService(
     private static bool ContainsAny(string? value, params string[] needles) =>
         value is not null && needles.Any(n => value.Contains(n, StringComparison.OrdinalIgnoreCase));
 
-    private static async Task<ValidationResultDto> ValidateAsync(V5Backup backup, AppDbContext? db)
+    private static async Task<ValidationResultDto> Validate(V5Backup backup, AppDbContext? db)
     {
         var errors = new List<string>();
         var warnings = new List<string>();

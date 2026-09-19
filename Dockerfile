@@ -18,15 +18,18 @@ COPY --from=spa /spa/dist/ ./src/FakeVeresiye.Api/wwwroot/
 RUN dotnet publish ./src/FakeVeresiye.Api/FakeVeresiye.Api.csproj \
       -c Release -o /app --no-restore -p:SkipSpaBuild=true
 
-# 3) Runtime — non-root, DB on a mounted volume
+# 3) Runtime — non-root. DB on one mounted volume, the action log on a second, separate one —
+# deliberately not under /data, so a problem with the data volume (corruption, a bad restore,
+# an accidental wipe) can't take the log that would help diagnose it down with it.
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app ./
-RUN mkdir -p /data && chown app:app /data
+RUN mkdir -p /data /var/log/fakeveresiye && chown app:app /data /var/log/fakeveresiye
 USER app
 ENV ASPNETCORE_URLS=http://+:8080 \
     ASPNETCORE_ENVIRONMENT=Production \
-    ConnectionStrings__Default="Data Source=/data/fakeveresiye.db"
+    ConnectionStrings__Default="Data Source=/data/fakeveresiye.db" \
+    ActionLog__Path="/var/log/fakeveresiye/actions-.log"
 EXPOSE 8080
-VOLUME /data
+VOLUME ["/data", "/var/log/fakeveresiye"]
 ENTRYPOINT ["dotnet", "FakeVeresiye.Api.dll"]

@@ -26,21 +26,16 @@ public class ReportsController(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 50)
     {
-        try
-        {
-            var statement = await statements.BuildPageAsync(id, from, to, page, pageSize);
-            return statement is null ? NotFound() : Ok(statement);
-        }
-        catch (ArgumentException e)
-        {
-            throw new BadHttpRequestException(e.Message);
-        }
+        // An invalid date range surfaces as ArgumentException; ApiExceptionHandler turns
+        // that into a 400 with the message.
+        var statement = await statements.BuildPage(id, from, to, page, pageSize);
+        return statement is null ? NotFound() : Ok(statement);
     }
 
     [HttpGet("customers/{id:int}/statement.xlsx")]
     public async Task<IActionResult> StatementExcel(int id, DateOnly? from, DateOnly? to)
     {
-        var statement = await BuildAsync(id, from, to);
+        var statement = await statements.Build(id, from, to);
         if (statement is null)
             return NotFound();
 
@@ -50,23 +45,11 @@ public class ReportsController(
     [HttpGet("customers/{id:int}/statement.pdf")]
     public async Task<IActionResult> StatementPdf(int id, DateOnly? from, DateOnly? to)
     {
-        var statement = await BuildAsync(id, from, to);
+        var statement = await statements.Build(id, from, to);
         if (statement is null)
             return NotFound();
 
         return File(pdfExporter.Build(statement), "application/pdf", FileName(statement, "pdf"));
-    }
-
-    private async Task<StatementResponse?> BuildAsync(int id, DateOnly? from, DateOnly? to)
-    {
-        try
-        {
-            return await statements.BuildAsync(id, from, to);
-        }
-        catch (ArgumentException e)
-        {
-            throw new BadHttpRequestException(e.Message);
-        }
     }
 
     private static string FileName(StatementResponse s, string extension)

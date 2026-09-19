@@ -1,0 +1,18 @@
+# Local-dev override for testing compose.yaml on a machine where /var/log/fakeveresiye can't
+# be used directly — notably Docker Desktop (macOS/Windows), which only shares specific host
+# paths (~/Users, /Volumes, /private, /tmp) into its VM. /var/log isn't one of them: a bind
+# mount there gets created inside the VM instead of on the real host, so it's invisible to you
+# and, unless pre-created with the right owner, ends up root-owned and unwritable by the app.
+#
+# On the actual Linux deployment target this file is unnecessary — dockerd runs natively there,
+# so a real /var/log/fakeveresiye (created + chown'd per the README) works as-is.
+#
+# To use: copy this file to compose.override.yaml (gitignored, so it never leaks into a real
+# deploy) — `docker compose` merges it automatically. Then:
+#   mkdir -p logs
+#   docker compose up -d --build
+
+services:
+  app:
+    volumes:
+      - ./logs:/var/log/fakeveresiye
