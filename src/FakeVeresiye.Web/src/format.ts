@@ -22,5 +22,8 @@ export function toDateInput(iso: string): string {
 }
 
 export function todayInput(): string {
-  return new Date().toISOString().slice(0, 10);
+  // Local date, not toISOString() (UTC), which is yesterday for the first hours after midnight.
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
