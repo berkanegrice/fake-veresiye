@@ -41,7 +41,7 @@ public class StatementServiceTests : IDisposable
     {
         var service = new StatementService(_db);
 
-        var statement = await service.BuildAsync(1, D("2023-02-01"), D("2023-12-31"));
+        var statement = await service.Build(1, D("2023-02-01"), D("2023-12-31"));
 
         Assert.NotNull(statement);
         Assert.Equal(100m, statement!.OpeningBalance);
@@ -58,7 +58,7 @@ public class StatementServiceTests : IDisposable
     {
         var service = new StatementService(_db);
 
-        var statement = await service.BuildAsync(1, from: null, to: null);
+        var statement = await service.Build(1, from: null, to: null);
 
         Assert.NotNull(statement);
         Assert.Equal(0m, statement!.OpeningBalance);
@@ -70,7 +70,7 @@ public class StatementServiceTests : IDisposable
     public async Task Unknown_customer_returns_null()
     {
         var service = new StatementService(_db);
-        Assert.Null(await service.BuildAsync(999, null, null));
+        Assert.Null(await service.Build(999, null, null));
     }
 
     [Fact]
@@ -78,8 +78,8 @@ public class StatementServiceTests : IDisposable
     {
         var service = new StatementService(_db);
 
-        var page1 = await service.BuildPageAsync(1, from: null, to: null, page: 1, pageSize: 3);
-        var page2 = await service.BuildPageAsync(1, from: null, to: null, page: 2, pageSize: 3);
+        var page1 = await service.BuildPage(1, from: null, to: null, page: 1, pageSize: 3);
+        var page2 = await service.BuildPage(1, from: null, to: null, page: 2, pageSize: 3);
 
         Assert.NotNull(page1);
         Assert.Equal(4, page1!.LineTotal);
@@ -102,7 +102,7 @@ public class StatementServiceTests : IDisposable
     {
         var service = new StatementService(_db);
         await Assert.ThrowsAsync<ArgumentException>(
-            () => service.BuildAsync(1, D("2024-01-01"), D("2023-01-01")));
+            () => service.Build(1, D("2024-01-01"), D("2023-01-01")));
     }
 
     public void Dispose()

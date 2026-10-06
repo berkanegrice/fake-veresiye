@@ -16,8 +16,8 @@ public class BackupReaderTests
     {
         var backup = ReadSample();
 
-        Assert.Equal(125, backup.Customers.Count);
-        Assert.Equal(9232, backup.Transactions.Count);
+        Assert.Equal(3, backup.Customers.Count);
+        Assert.Equal(6, backup.Transactions.Count);
     }
 
     [Fact]
@@ -29,7 +29,7 @@ public class BackupReaderTests
         // replace every Turkish letter with U+FFFD or '?'.
         Assert.DoesNotContain(backup.Customers, c => c.Name.Contains('�') || c.Name.Contains('?'));
 
-        // "ÇİÇEK" (flower) / "ÇİÇEKÇİLİK" (florist) appears throughout this dataset.
+        // "ÇİÇEKÇİLİK" (florist) appears in this fixture.
         Assert.Contains(backup.Customers, c => c.Name.Contains("ÇİÇEK"));
         Assert.Contains(backup.Customers, c => c.Name.Contains("ŞTİ") || c.Name.Contains("GÖRDES"));
     }

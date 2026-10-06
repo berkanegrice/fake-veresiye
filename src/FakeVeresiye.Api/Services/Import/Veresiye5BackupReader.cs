@@ -143,7 +143,7 @@ public class Veresiye5BackupReader
 
             p += 4 + chunkLength;
             if (p < data.Length &&
-                IndexOf(data, Encoding.ASCII.GetBytes(@"c:\terkon\veresiye\data\"), p) == p)
+                IndexOf(data, [.. @"c:\terkon\veresiye\data\"u8], p) == p)
                 break;
         }
 
@@ -160,15 +160,7 @@ public class Veresiye5BackupReader
     {
         for (var i = start; i <= haystack.Length - needle.Length; i++)
         {
-            var match = true;
-            for (var j = 0; j < needle.Length; j++)
-            {
-                if (haystack[i + j] != needle[j])
-                {
-                    match = false;
-                    break;
-                }
-            }
+            var match = !needle.Where((t, j) => haystack[i + j] != t).Any();
 
             if (match)
                 return i;

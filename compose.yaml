@@ -10,6 +10,9 @@ services:
     volumes:
       # SQLite database lives here, on the host, so the backup job can read it directly.
       - ./data:/data
+      # Action log on a separate host path from ./data on purpose: if the data volume is
+      # ever lost or corrupted, the log that would help explain what happened survives it.
+      - /var/log/fakeveresiye:/var/log/fakeveresiye
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       # The image already sets ConnectionStrings__Default=Data Source=/data/fakeveresiye.db

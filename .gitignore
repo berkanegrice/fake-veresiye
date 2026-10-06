@@ -8,18 +8,26 @@ src/FakeVeresiye.Api/wwwroot/assets/
 src/FakeVeresiye.Api/wwwroot/index.html
 publish/
 
-# SQLite runtime files (the seeded fakeveresiye.db is committed on purpose)
+# SQLite runtime files — the dev database is a local copy of real imported data, never commit it
+*.db
 *.db-shm
 *.db-wal
+
+# User-action log files (see Program.cs UseSerilog)
+src/FakeVeresiye.Api/logs/
 
 # Node / Vite
 node_modules/
 src/FakeVeresiye.Web/dist/
 
-# Docker Compose bind-mount (runtime database)
+# Docker Compose bind-mounts (runtime database / local-dev action log — see compose.override.yaml.example)
 /data/
+/logs/
+compose.override.yaml
 
 # Editor / OS
 .vs/
 .idea/
 .DS_Store
+*.swp
+*.swo

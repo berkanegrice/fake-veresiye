@@ -13,20 +13,20 @@ public interface IStatementService
     /// <paramref name="to"/> to today. Returns <c>null</c> if the customer does not exist.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="from"/> is after <paramref name="to"/>.</exception>
-    Task<StatementResponse?> BuildAsync(int customerId, DateOnly? from, DateOnly? to);
+    Task<StatementResponse?> Build(int customerId, DateOnly? from, DateOnly? to);
 
     /// <summary>
-    /// As <see cref="BuildAsync"/>, but returns only one page of the lines. Opening/closing
+    /// As <see cref="Build"/>, but returns only one page of the lines. Opening/closing
     /// balances, totals and each line's running balance still reflect the whole window.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="from"/> is after <paramref name="to"/>.</exception>
-    Task<StatementPageResponse?> BuildPageAsync(
+    Task<StatementPageResponse?> BuildPage(
         int customerId, DateOnly? from, DateOnly? to, int page, int pageSize);
 }
 
 public class StatementService(AppDbContext db) : IStatementService
 {
-    public async Task<StatementResponse?> BuildAsync(int customerId, DateOnly? from, DateOnly? to)
+    public async Task<StatementResponse?> Build(int customerId, DateOnly? from, DateOnly? to)
     {
         var customer = await db.Customers
             .AsNoTracking()
@@ -89,10 +89,10 @@ public class StatementService(AppDbContext db) : IStatementService
             ClosingBalance: running);
     }
 
-    public async Task<StatementPageResponse?> BuildPageAsync(
+    public async Task<StatementPageResponse?> BuildPage(
         int customerId, DateOnly? from, DateOnly? to, int page, int pageSize)
     {
-        var full = await BuildAsync(customerId, from, to);
+        var full = await Build(customerId, from, to);
         if (full is null)
             return null;
 

@@ -21,22 +21,17 @@ public class ImportController(
         if (!file.FileName.EndsWith(".exa", StringComparison.OrdinalIgnoreCase))
             return BadRequest(new { error = "Please select a Veresiye 5 .EXA backup." });
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            return Ok(await backupImport.PreviewAsync(stream, file.FileName));
-        }
-        catch (Exception e)
-        {
-            return BadRequest(new { error = e.Message });
-        }
+        // A malformed backup surfaces as ArgumentException/InvalidOperationException from
+        // Veresiye5BackupReader; ApiExceptionHandler turns that into a 400 with the message.
+        await using var stream = file.OpenReadStream();
+        return Ok(await backupImport.Preview(stream, file.FileName));
     }
 
     /// <summary>Phase 2: re-validate the previewed backup against the current database.</summary>
     [HttpPost("exa/validate/{token:guid}")]
     public async Task<ActionResult<ValidationResultDto>> Validate(Guid token)
     {
-        var result = await backupImport.ValidateAsync(token);
+        var result = await backupImport.Validate(token);
         return result is null
             ? NotFound(new { error = "Preview expired or was not found. Upload the backup again." })
             : Ok(result);
@@ -46,15 +41,7 @@ public class ImportController(
     [HttpPost("exa/import/{token:guid}")]
     public async Task<IActionResult> Import(Guid token)
     {
-        ImportOutcome outcome;
-        try
-        {
-            outcome = await backupImport.ImportAsync(token);
-        }
-        catch (Exception e)
-        {
-            return BadRequest(new { error = e.Message });
-        }
+        var outcome = await backupImport.Import(token);
 
         if (!outcome.Found)
             return NotFound(new { error = "Preview expired or was not found. Upload the backup again." });
@@ -72,14 +59,7 @@ public class ImportController(
         if (file is null || file.Length == 0)
             return BadRequest(new { error = "The selected file is empty." });
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            return Ok(await excelImport.ImportAsync(stream));
-        }
-        catch (Exception e)
-        {
-            return BadRequest(new { error = e.Message });
-        }
+        await using var stream = file.OpenReadStream();
+        return Ok(await excelImport.Import(stream));
     }
 }

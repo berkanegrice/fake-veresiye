@@ -86,6 +86,7 @@ The `Dockerfile` builds the SPA (Node stage) and publishes the API (SDK stage) a
 
 ```bash
 mkdir -p data && sudo chown 1654:1654 data   # the image runs as uid 1654; it must own /data
+sudo mkdir -p /var/log/fakeveresiye && sudo chown 1654:1654 /var/log/fakeveresiye
 docker compose up -d --build
 sudo systemctl enable --now docker            # start the stack after a reboot
 ```
@@ -94,8 +95,11 @@ sudo systemctl enable --now docker            # start the stack after a reboot
   change to `8080:8080` to reach it from other LAN devices).
 - `restart: unless-stopped` brings the container back after a crash or reboot.
 - **SQLite lives in `./data/fakeveresiye.db` on the host** (bind mount). `.dockerignore`
-  excludes `*.db`, so it starts empty and `EnsureCreated()` builds the schema on first run —
-  then import your `.exa` through the wizard.
+  excludes `*.db`, so it starts empty and migrations build the schema on first run — then
+  import your `.exa` through the wizard.
+- **The action log lives in `/var/log/fakeveresiye/` on the host** — deliberately a separate
+  bind mount from `./data`, so losing or corrupting the data volume can't take the log that
+  would help explain it down too. One file per day (`actions-YYYYMMDD.log`), 30 days kept.
 - Update after a `git pull`: `docker compose up -d --build`.
 
 For LAN HTTPS put Caddy in front; for remote access use Tailscale or a Cloudflare Tunnel.
