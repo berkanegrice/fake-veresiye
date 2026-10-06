@@ -4,7 +4,7 @@ import { Modal } from "../../components/Modal";
 import { api } from "../../api/client";
 import { TransactionTypeValue, type TransactionResponse } from "../../api/types";
 import { useT } from "../../i18n";
-import { toDateInput, todayInput } from "../../format";
+import { parseAmountInput, toAmountInput, toDateInput, todayInput } from "../../format";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Mode =
@@ -22,7 +22,7 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
   const t = useT();
 
   const editing = mode.kind === "edit";
-  const [amount, setAmount] = useState(editing ? String(mode.transaction.amount) : "");
+  const [amount, setAmount] = useState(editing ? toAmountInput(mode.transaction.amount) : "");
   const [date, setDate] = useState(
     editing ? toDateInput(mode.transaction.transactionDate) : todayInput(),
   );
@@ -86,8 +86,12 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
-    const value = Number(amount.replace(",", "."));
-    if (!Number.isFinite(value) || value <= 0) {
+    const value = parseAmountInput(amount);
+    if (value === null) {
+      setError(t("common.amountFormat"));
+      return;
+    }
+    if (value <= 0) {
       setError(t("common.amountPositive"));
       return;
     }
@@ -140,6 +144,10 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
           <input
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            onBlur={() => {
+              const parsed = parseAmountInput(amount);
+              if (parsed !== null) setAmount(toAmountInput(parsed));
+            }}
             inputMode="decimal"
             autoFocus
             required

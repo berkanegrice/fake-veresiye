@@ -24,6 +24,7 @@ const en: Record<TranslationKey, string> = {
   "common.perPage": "/ page",
   "common.required": "This field is required.",
   "common.amountPositive": "Amount must be greater than zero.",
+  "common.amountFormat": "Enter the amount like 2.000 or 2.000,50.",
 
   "customer.add": "Add customer",
   "customer.new": "New customer",

@@ -22,6 +22,7 @@ const tr = {
   "common.perPage": "/ sayfa",
   "common.required": "Bu alan zorunludur.",
   "common.amountPositive": "Tutar sıfırdan büyük olmalıdır.",
+  "common.amountFormat": "Tutar 2.000 veya 2.000,50 biçiminde girilmelidir.",
 
   "customer.add": "Müşteri ekle",
   "customer.new": "Yeni müşteri",
