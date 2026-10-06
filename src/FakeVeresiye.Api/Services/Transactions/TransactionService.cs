@@ -1,3 +1,4 @@
+using System.Globalization;
 using FakeVeresiye.Api.Data;
 using FakeVeresiye.Api.Dtos;
 using FakeVeresiye.Api.Models;
@@ -29,10 +30,18 @@ public interface ITransactionService
 
     /// <returns><c>false</c> if no such transaction exists.</returns>
     Task<bool> Delete(int id);
+
+    /// <summary>
+    /// Distinct descriptions previously used across all transactions, most-recently-used first,
+    /// optionally filtered by <paramref name="search"/>. Powers the description auto-complete.
+    /// </summary>
+    Task<List<string>> ListDescriptions(string? search, int limit);
 }
 
 public class TransactionService(AppDbContext db, ILogger<TransactionService> logger) : ITransactionService
 {
+    private static readonly CultureInfo Turkish = CultureInfo.GetCultureInfo("tr-TR");
+
     public async Task<PagedResponse<TransactionResponse>?> List(
         int customerId, int page, int pageSize, LedgerSort sort, SortDirection dir)
     {
@@ -118,6 +127,33 @@ public class TransactionService(AppDbContext db, ILogger<TransactionService> log
             "Transaction {TransactionId} updated for customer {CustomerId}: {Type} {Amount}",
             transaction.Id, transaction.CustomerId, transaction.Type, transaction.Amount);
         return TransactionWriteResult.Ok(transaction.ToResponse());
+    }
+
+    public async Task<List<string>> ListDescriptions(string? search, int limit)
+    {
+        var grouped = await db.Transactions
+            .AsNoTracking()
+            .Where(t => !string.IsNullOrEmpty(t.Description))
+            .GroupBy(t => t.Description!)
+            .Select(g => new { Description = g.Key, LastId = g.Max(t => t.Id) })
+            .ToListAsync();
+
+        // SQLite's LIKE only case-folds ASCII, so filter with a Turkish-aware, accent- and
+        // case-insensitive comparison in memory, same approach as CustomerService.List.
+        IEnumerable<(string Description, int LastId)> matched =
+            grouped.Select(g => (g.Description, g.LastId));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim();
+            matched = matched.Where(g => Turkish.CompareInfo.IndexOf(
+                g.Description, term, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace) >= 0);
+        }
+
+        return [.. matched
+            .OrderByDescending(g => g.LastId)
+            .Take(limit)
+            .Select(g => g.Description)];
     }
 
     public async Task<bool> Delete(int id)

@@ -111,6 +111,9 @@ export const api = {
   deleteTransaction: (id: number) =>
     request<null>(`/transactions/${id}`, { method: "DELETE" }),
 
+  listDescriptions: (search: string, limit = 8) =>
+    request<string[]>(`/transactions/descriptions${qs({ search, limit })}`),
+
   previewExa: (file: File) => {
     const form = new FormData();
     form.append("file", file);

@@ -1,9 +1,11 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { Modal } from "../../components/Modal";
 import { api } from "../../api/client";
 import { TransactionTypeValue, type TransactionResponse } from "../../api/types";
 import { useT } from "../../i18n";
 import { toDateInput, todayInput } from "../../format";
+import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 
 type Mode =
   | { kind: "debt"; customerId: number }
@@ -29,6 +31,51 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [descriptionSuggestions, setDescriptionSuggestions] = useState<string[]>([]);
+  const debouncedDescription = useDebouncedValue(description.trim(), 250);
+
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const [descriptionRect, setDescriptionRect] = useState<{
+    top: number;
+    left: number;
+    width: number;
+  } | null>(null);
+
+  // The dropdown is portaled to <body> and fixed-positioned from this rect, so it isn't
+  // clipped by the modal body's `overflow-y: auto` when the field sits near the bottom.
+  const updateDescriptionRect = useCallback(() => {
+    const el = descriptionInputRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    setDescriptionRect({ top: r.bottom + 2, left: r.left, width: r.width });
+  }, []);
+
+  useEffect(() => {
+    if (!descriptionOpen) return;
+    let cancelled = false;
+    api.listDescriptions(debouncedDescription).then((results) => {
+      if (!cancelled) {
+        setDescriptionSuggestions(
+          results.filter((d) => d.toLowerCase() !== debouncedDescription.toLowerCase()),
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [descriptionOpen, debouncedDescription]);
+
+  useEffect(() => {
+    if (!descriptionOpen) return;
+    updateDescriptionRect();
+    window.addEventListener("scroll", updateDescriptionRect, true);
+    window.addEventListener("resize", updateDescriptionRect);
+    return () => {
+      window.removeEventListener("scroll", updateDescriptionRect, true);
+      window.removeEventListener("resize", updateDescriptionRect);
+    };
+  }, [descriptionOpen, updateDescriptionRect]);
 
   const title =
     mode.kind === "debt"
@@ -47,7 +94,8 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
     setBusy(true);
     setError("");
     try {
-      const isoDate = new Date(date + "T00:00:00").toISOString();
+      // Plain local date (no "Z"): converting to UTC shifts it a day back east of Greenwich.
+      const isoDate = date + "T00:00:00";
       if (mode.kind === "edit") {
         await api.updateTransaction(mode.transaction.id, {
           amount: value,
@@ -101,10 +149,44 @@ export function TransactionFormDialog({ mode, onClose, onSaved }: TransactionFor
           <span>{t("tx.date")}</span>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
         </label>
-        <label>
+        <label className="combobox">
           <span>{t("tx.description")}</span>
-          <input value={description} onChange={(e) => setDescription(e.target.value)} />
+          <input
+            ref={descriptionInputRef}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onFocus={() => setDescriptionOpen(true)}
+            onBlur={() => window.setTimeout(() => setDescriptionOpen(false), 150)}
+          />
         </label>
+        {descriptionOpen &&
+          descriptionSuggestions.length > 0 &&
+          descriptionRect &&
+          createPortal(
+            <div
+              className="combobox-list floating"
+              style={{
+                top: descriptionRect.top,
+                left: descriptionRect.left,
+                width: descriptionRect.width,
+              }}
+            >
+              {descriptionSuggestions.map((suggestion) => (
+                <button
+                  type="button"
+                  key={suggestion}
+                  className="customer-item"
+                  onMouseDown={() => {
+                    setDescription(suggestion);
+                    setDescriptionOpen(false);
+                  }}
+                >
+                  <span>{suggestion}</span>
+                </button>
+              ))}
+            </div>,
+            document.body,
+          )}
         {editing && <p className="hint">{t("tx.editHint")}</p>}
         {error && <div className="error">{error}</div>}
       </form>

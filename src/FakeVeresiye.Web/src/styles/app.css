@@ -749,6 +749,19 @@ th.num {
 .combobox-list .customer-item {
   width: 100%;
 }
+ 
+/* Used when the combobox lives inside a scrolling container (e.g. a modal body):
+   position is set inline (top/left/width from the input's bounding rect), so this
+   just cancels the default absolute placement instead of clipping against it. */
+.combobox-list.floating {
+  position: fixed;
+  top: auto;
+  left: auto;
+  right: auto;
+  margin-top: 0;
+  /* Above .overlay's z-index: 50, since this can be portaled out of a modal. */
+  z-index: 60;
+}
 
 @media (max-width: 820px) {
   .layout {

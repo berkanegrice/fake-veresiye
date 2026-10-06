@@ -20,6 +20,12 @@ public class TransactionsController(ITransactionService transactions) : Controll
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpGet("transactions/descriptions")]
+    public async Task<ActionResult<List<string>>> ListDescriptions(
+        [FromQuery] string? search = null,
+        [FromQuery] int limit = 8) =>
+        Ok(await transactions.ListDescriptions(search, Math.Clamp(limit, 1, 50)));
+
     [HttpPost("customers/{customerId:int}/transactions")]
     public async Task<ActionResult<TransactionResponse>> Add(int customerId, CreateTransactionRequest request) =>
         ToActionResult(await transactions.Add(customerId, request));
